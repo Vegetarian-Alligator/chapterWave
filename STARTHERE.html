@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Interactive Story</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1, h2, p {
+            margin-bottom: 20px;
+        }
+        .illustration {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        .button-container a {
+            text-decoration: none;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .button-container a:hover {
+            background-color: #004494; /* Darker blue */
+        }
+		
+		.toolbar {
+			background-color: #333;
+			color: white;
+			padding: 10px;
+			text-align: center;
+			position: fixed;
+			width: 100%;
+			top: 0;
+			left: 0;
+			z-index: 1000;
+		}
+
+		.toolbar a {
+			color: white;
+			margin: 0 10px;
+			text-decoration: none;
+		}
+
+		.toolbar a:hover {
+			text-decoration: underline;
+		}
+		
+		.engraved-text {
+			color: #d3d3d3; /* Light grey color for the text */
+			text-shadow: 1px 1px 0px #ffffff, /* Highlight top-left */
+						 -1px -1px 1px #a9a9a9; /* Shadow bottom-right */
+			font-weight: bold;
+			font-style: normal;
+			font-family: Arial, sans-serif;
+		}
+    </style>
+</head>
+<body onload="loadCurrentChapter()">
+
+<div class="container" id="content">
+    <!-- Dynamic content will be loaded here -->
+</div>
+</body>
+<script src="gamefiles\chapters.js"></script>
+<script>
+	let lastClickedButton = null;
+	
+	
+	
+    function saveData(key, value) {
+        localStorage.setItem(key, value);
+    }
+
+    function getData(key) {
+        return localStorage.getItem(key);
+    }
+	
+	
+	
+function restartGame() {
+    const userConfirmed = confirm("Are you sure you want to restart the game? This will erase all progress.");
+
+    if (userConfirmed) {
+        clearData();
+    }
+}
+
+    function clearData() {
+        localStorage.clear();
+        alert("All progress has been reset.");
+        startChapter();  // Start from the beginning
+    }
+
+    function loadCurrentChapter() {
+		clearData();
+        const savedChapter = getData('currentChapter');
+		const sound = getData('currentSound')
+		if (sound) {
+		
+		}
+        if (savedChapter) {
+			let result = loadDivContent();
+			if (result = false) alert("Warning, there is a problem with your save!")
+            //window[savedChapter]();  // Calls the function by its name
+        } else {
+            startChapter();  // Start with chapter 1 by default
+        }
+    }
+	
+    // Helper function to clear the content div
+    function clearContent() {
+        document.getElementById('content').innerHTML = '';
+    }
+
+    // Helper function to add a header (h1 or h2) to the content div
+    function addHeader(text, level = 1) {
+        const header = document.createElement(`h${level}`);
+        header.textContent = text;
+        document.getElementById('content').appendChild(header);
+    }
+
+    // Helper function to add text (p) to the content div
+    function addText(text) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        document.getElementById('content').appendChild(paragraph);
+    }
+
+    // Helper function to add an image to the content div
+    function addImage(src, alt = '', className = 'illustration') {
+        const img = document.createElement('img');
+        img.src =  "gamefiles\\images\\" + src;
+        img.alt = alt;
+        img.className = className;
+        document.getElementById('content').appendChild(img);
+    }
+
+    // Helper function to add a button (link) to the content div
+
+	function chapterButton(text, chapter, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearChapter=[]){
+		addButton(text, chapter, true, clear, markscroll,scrollToNew, chapterDisableLinks, clearChapter);
+	}	
+
+    function addButton(text, action, nextChapter=false, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true,  clearChapter=[]) {
+		const button = document.createElement('a');
+        button.href = '';
+        button.textContent = text;
+		button.setAttribute('data-choice', 'true');
+        button.onclick = function() {
+            lastClickedButton = this;
+			if (nextChapter == true) {
+				startChapterInternal(action, clear, markscroll,scrollToNew, chapterDisableLinks, clearChapter);
+			}else window[action]();
+			return false;
+        };
+        document.getElementById('content').appendChild(button);
+    }
+	
+	
+	
+	function disableOldButtons() {
+		const buttons = document.querySelectorAll('[data-choice="true"]');
+		buttons.forEach(button => {
+			
+			//let old_element = document.getElementById("btn");
+			let newText = document.createElement("p");
+
+			if (button == lastClickedButton) {
+				console.log("green background");
+				newText.style.backgroundColor = '#4CAF50'; // Green for the chosen button
+			} else {
+				console.log("red background");
+				newText.style.backgroundColor = '#f44336'; // Red for other buttons
+			}
+			newText.textContent = button.textContent;
+			newText = button.parentNode.replaceChild(newText, button);
+			newText.classList.add('engraved-text');
+			
+			
+
+		});
+	}
+	
+	function goBack() {
+    // Go back to the previous chapter if available
+    const previousChapter = getData('previousChapter');
+
+    if (previousChapter) {
+        // Construct the override function name
+        const overrideFunctionName = previousChapter + 'Override';
+
+        if (typeof window[overrideFunctionName] === 'function') {
+            // Call the override function if it exists
+            window[overrideFunctionName]();
+        } else if (typeof window[previousChapter] === 'function') {
+            // Otherwise, call the regular chapter function
+            window[previousChapter]();
+        } else {
+            loadCurrentChapter(); // Fallback to the current chapter if no valid function is found
+        }
+    } else {
+        loadCurrentChapter(); // Fallback to the current chapter if no previous chapter is saved
+    }
+}
+
+function loadScreen(screenFunction) {
+    // Save the current chapter so we can return to it later
+    const currentChapter = getData('currentChapter');
+    saveData('previousChapter', currentChapter);
+
+    // Check if the screen function exists and execute it
+    if (typeof window[screenFunction] === 'function') {
+        window[screenFunction]();
+    } else {
+        console.error(`Function ${screenFunction} does not exist.`);
+    }
+}
+
+function scrollMark() {
+    // Remove any existing scroll marker
+    const existingMarker = document.getElementById('scroll-marker');
+    if (existingMarker) {
+        existingMarker.remove();
+    }
+
+    // Create and insert a new scroll marker
+    const scrollMarker = document.createElement('div');
+    scrollMarker.className = 'scroll-marker';
+    scrollMarker.style.height = '1px';
+    scrollMarker.style.marginTop = '10px'; // Optional: Adds a little space before the marker
+    scrollMarker.style.visibility = 'hidden'; // Hide the marker
+    scrollMarker.id = 'scroll-marker';
+    const contentDiv = document.getElementById('content');
+    contentDiv.appendChild(scrollMarker);
+}
+
+function scrollToNewContent() {
+    const scrollMarker = document.getElementById('scroll-marker');
+    
+    if (scrollMarker) {
+        const markerTop = scrollMarker.offsetTop;
+        const viewportHeight = window.innerHeight;
+        const targetScrollPosition = markerTop - (viewportHeight * 0.15);
+
+        window.scrollTo({
+            top: targetScrollPosition,
+            behavior: 'smooth'
+        });
+    }
+}
+
+function saveDivContent() {
+    const contentDiv = document.getElementById('content');
+    const contentHTML = contentDiv.innerHTML;
+    localStorage.setItem('savedContent', contentHTML);
+}
+/*
+function saveHiddenDivContent() {
+    const contentDiv = document.getElementById('content');
+    const contentHTML = contentDiv.innerHTML;
+    localStorage.setItem('savedHiddenContent', contentHTML);
+}
+*/
+function loadDivContent() {
+    const savedContent = localStorage.getItem('savedContent');
+	const savedHiddenContent = localStorage.getItem('savedHiddenContent')
+	/*if (savedHiddenContent) { //The user was in a minigame somehow..
+		
+	}*/
+    if (savedContent) {
+        const contentDiv = document.getElementById('content');
+        contentDiv.innerHTML = savedContent;
+		return true;
+    }
+	return false;
+}
+/*
+function loadHiddenDivContent() {
+    const savedContent = localStorage.getItem('savedHiddenContent');
+    if (savedContent) {
+        const contentDiv = document.getElementById('saveHiddencontent');
+        contentDiv.innerHTML = savedContent;
+		localStorage.removeItem('savedHiddenContent');
+		return true;
+    }
+	return false;
+}
+*/
+function enterStandaloneChapter(chapterFunction) {
+    const contentDiv = document.getElementById('content');
+    const allOtherElements = document.body.children;
+    
+    // Hide all other elements except the content div
+    for (let element of allOtherElements) {
+        if (element !== contentDiv) {
+			//element.setAttribute(So we can get the original displayStyle!
+            element.style.display = 'none';
+        }
+    }
+
+    // Clear the content and load the standalone chapter
+    clearContent();
+    chapterFunction();
+}
+
+function exitStandaloneChapter(appendContents = false) { //Add appendContents 
+    const allOtherElements = document.body.children;
+	///TODO:
+	//If the override is true, then we can actually save these elements along with the others
+    // Show all previously hidden elements
+    for (let element of allOtherElements) {
+        element.style.display = '';
+    }
+
+    // Load the saved content from localStorage
+    loadDivContent();
+}
+
+function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearChapter=[]){ //overrideStandAloneClear=false //appendLastStandAlone=false //standalone=false
+	//Search for "currentInputs
+	//Change their attributes to oldInputs
+	//Disable Them
+	//Use their whichAttribute tag to save the values the user wrote
+	//Check the toolbar
+	//Start or Disable any sounds
+	
+	//clear everying (ONLY if clear is true)
+	
+	if (clear==true) clearContent();
+	//Clear any chapters matching the list in clearChapter
+	//If NOT standalone
+	if (chapterDisableLinks==true) {
+		disableOldButtons();
+	}
+	//Should disable all the links (if chapterDisableLinks=true)
+	//Call the chapter itself
+	window[chapter]();
+	if (scrollToNew==true) scrollToNewContent();
+	if (markscroll==true) scrollMark();
+	saveDivContent();
+	//If PREVIOUS CHAPTER standalone....
+		//exitStandAloneChapter(overrideStandAloneClear)
+		
+	//If the current is... 
+		//enterStandaloneChapter
+}
+
+
+
+
+
+
+</script>
+</html>
