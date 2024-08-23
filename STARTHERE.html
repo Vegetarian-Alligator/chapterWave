@@ -86,9 +86,62 @@
 </div>
 </body>
 <script src="gamefiles\chapters.js"></script>
+
 <script>
 	let lastClickedButton = null;
+	let audioObjects = {};
 	
+	function loadSound(){
+		let sounds = JSON.parse(localStorage.getItem('playingSounds')) || [];
+		for (sound in sounds) {
+			audioObjects[sound.src] = sound;
+			let playMe = new Audio(sound.src);
+			playMe.loop=sound.loop;
+			let delay = sound.delay;
+			setTimeout(function() {
+				playMe.play();
+			}, delay);
+		}
+	}
+
+// Function to start a sound and add it to the list in localStorage
+	function startSound(soundSrc, loop=true, delay=0) { //This should accept an array for efficiencies sake....
+		// Get the current list of sound sources from localStorage
+		let sounds = JSON.parse(localStorage.getItem('playingSounds')) || [];
+
+		// Create a new Audio object and play the sound
+		let sound = new Audio("gamefiles\\sound\\" + soundSrc);
+		sound.loop = loop;
+		//sound.play();
+		setTimeout(function() {
+			sound.play();
+		}, delay);
+
+		// Store the Audio object in memory
+		audioObjects[soundSrc] = sound;
+
+		// Add the sound source to the list
+		sounds.push({src: soundSrc, loop: loop, delay: delay});
+		localStorage.setItem('playingSounds', JSON.stringify(sounds));
+	}
+
+	// Function to stop all sounds and clear the list in localStorage
+	function stopAllSound() {
+		// Get the current list of sound sources from localStorage
+		let sounds = JSON.parse(localStorage.getItem('playingSounds')) || [];
+
+		// Stop each sound using the in-memory audio objects
+		sounds.forEach(function(soundSrc) {
+			if (audioObjects[soundSrc.src]) {
+				audioObjects[soundSrc.src].pause();
+				audioObjects[soundSrc.src].currentTime = 0;
+				delete audioObjects[soundSrc]; // Remove the object from memory
+			}
+		});
+
+    // Clear the list in localStorage
+    localStorage.removeItem('playingSounds');
+}
 	
 	
     function saveData(key, value) {
@@ -111,23 +164,20 @@ function restartGame() {
 
     function clearData() {
         localStorage.clear();
+		clearContent();
         alert("All progress has been reset.");
-        startChapter();  // Start from the beginning
+        startChapterInternal('startChapter');  // Start from the beginning
     }
 
     function loadCurrentChapter() {
-		clearData();
+		//clearData();
         const savedChapter = getData('currentChapter');
-		const sound = getData('currentSound')
-		if (sound) {
-		
-		}
         if (savedChapter) {
 			let result = loadDivContent();
 			if (result = false) alert("Warning, there is a problem with your save!")
             //window[savedChapter]();  // Calls the function by its name
         } else {
-            startChapter();  // Start with chapter 1 by default
+            startChapterInternal('startChapter')();  // Start with chapter 1 by default
         }
     }
 	
@@ -140,14 +190,14 @@ function restartGame() {
     function addHeader(text, level = 1) {
         const header = document.createElement(`h${level}`);
         header.textContent = text;
-        document.getElementById('content').appendChild(header);
+        document.getElementById('currentChapter').appendChild(header);
     }
 
     // Helper function to add text (p) to the content div
     function addText(text) {
         const paragraph = document.createElement('p');
         paragraph.textContent = text;
-        document.getElementById('content').appendChild(paragraph);
+        document.getElementById('currentChapter').appendChild(paragraph);
     }
 
     // Helper function to add an image to the content div
@@ -156,28 +206,44 @@ function restartGame() {
         img.src =  "gamefiles\\images\\" + src;
         img.alt = alt;
         img.className = className;
-        document.getElementById('content').appendChild(img);
+        document.getElementById('currentChapter').appendChild(img);
     }
 
     // Helper function to add a button (link) to the content div
 
-	function chapterButton(text, chapter, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearChapter=[]){
-		addButton(text, chapter, true, clear, markscroll,scrollToNew, chapterDisableLinks, clearChapter);
+	function chapterButton(text, chapterName, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearSound=true, clearChapter=[]){
+		//const clearChapterString = JSON.stringify(clearChapter); // Convert array to string representation
+		//let args = `("${chapterName}", ${clear}, ${markscroll}, ${scrollToNew}, ${chapterDisableLinks}, ${clearChapterString});`
+		//let args = JSON.stringify({chapterName: chapterName, clear: clear, markscroll: markscroll, scrollToNew: scrollToNew, chapterDisableLinks: chapterDisableLinks, clearChapter: clearChapter});
+		let functionName="startChapterInternal"
+		console.log(text)
+		console.log(chapterName);
+		addButton(text, "startChapterInternal", chapterName, clear,markscroll,scrollToNew,chapterDisableLinks,clearSound, clearChapter);
 	}	
+	
+	function executeLink(linkRef) {
+		let storedArgs = JSON.parse(linkRef.getAttribute('args'))
+		let args = Object.values(storedArgs);
+		console.log(args);
+		window[linkRef.getAttribute('functionName')](...args);
+	}
 
-    function addButton(text, action, nextChapter=false, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true,  clearChapter=[]) {
+    function addButton(text, functionName, ...args) {
+		//IT MIGHT BE NICE TO EXPAND THIS SO IT TAKES SOMETHING OTHER THAN A STRINGIFIED JSON OBJECT
+		
 		const button = document.createElement('a');
-        button.href = '';
+        //button.href = 'javascript:executeLink("this is info")';
         button.textContent = text;
 		button.setAttribute('data-choice', 'true');
-        button.onclick = function() {
-            lastClickedButton = this;
-			if (nextChapter == true) {
-				startChapterInternal(action, clear, markscroll,scrollToNew, chapterDisableLinks, clearChapter);
-			}else window[action]();
-			return false;
-        };
-        document.getElementById('content').appendChild(button);
+		
+		button.setAttribute('functionName', functionName);
+		console.log(functionName);
+		button.setAttribute('args', JSON.stringify(args));
+		
+		button.href="JavaScript:void(0)"
+		button.setAttribute('onclick','executeLink(this)');
+
+        document.getElementById('currentChapter').appendChild(button);
     }
 	
 	
@@ -193,7 +259,6 @@ function restartGame() {
 				console.log("green background");
 				newText.style.backgroundColor = '#4CAF50'; // Green for the chosen button
 			} else {
-				console.log("red background");
 				newText.style.backgroundColor = '#f44336'; // Red for other buttons
 			}
 			newText.textContent = button.textContent;
@@ -254,7 +319,7 @@ function scrollMark() {
     scrollMarker.style.marginTop = '10px'; // Optional: Adds a little space before the marker
     scrollMarker.style.visibility = 'hidden'; // Hide the marker
     scrollMarker.id = 'scroll-marker';
-    const contentDiv = document.getElementById('content');
+    const contentDiv = document.getElementById('currentChapter');
     contentDiv.appendChild(scrollMarker);
 }
 
@@ -287,10 +352,11 @@ function saveHiddenDivContent() {
 */
 function loadDivContent() {
     const savedContent = localStorage.getItem('savedContent');
-	const savedHiddenContent = localStorage.getItem('savedHiddenContent')
+	//const savedHiddenContent = localStorage.getItem('savedHiddenContent')
 	/*if (savedHiddenContent) { //The user was in a minigame somehow..
 		
 	}*/
+	console.log(savedContent);
     if (savedContent) {
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = savedContent;
@@ -310,6 +376,7 @@ function loadHiddenDivContent() {
 	return false;
 }
 */
+/*
 function enterStandaloneChapter(chapterFunction) {
     const contentDiv = document.getElementById('content');
     const allOtherElements = document.body.children;
@@ -339,8 +406,9 @@ function exitStandaloneChapter(appendContents = false) { //Add appendContents
     // Load the saved content from localStorage
     loadDivContent();
 }
+*/
 
-function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearChapter=[]){ //overrideStandAloneClear=false //appendLastStandAlone=false //standalone=false
+function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew=true, chapterDisableLinks=true, clearSound = true, clearChapter=[]){ //overrideStandAloneClear=false //appendLastStandAlone=false //standalone=false
 	//Search for "currentInputs
 	//Change their attributes to oldInputs
 	//Disable Them
@@ -349,8 +417,19 @@ function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew
 	//Start or Disable any sounds
 	
 	//clear everying (ONLY if clear is true)
-	
+	console.log("Starting internal chapters...");
+	if (clearSound==true) stopAllSound();
 	if (clear==true) clearContent();
+	let current =  document.getElementById('currentChapter')
+	if (current) {
+		current.id=current.getAttribute('chapterName');
+	}
+	
+	current = document.createElement("div");
+	current.id="currentChapter";
+	document.getElementById('content').appendChild(current);
+	
+	
 	//Clear any chapters matching the list in clearChapter
 	//If NOT standalone
 	if (chapterDisableLinks==true) {
@@ -358,6 +437,7 @@ function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew
 	}
 	//Should disable all the links (if chapterDisableLinks=true)
 	//Call the chapter itself
+	console.log(chapter);
 	window[chapter]();
 	if (scrollToNew==true) scrollToNewContent();
 	if (markscroll==true) scrollMark();
