@@ -85,11 +85,26 @@
     <!-- Dynamic content will be loaded here -->
 </div>
 </body>
-<script src="gamefiles\chapters.js"></script>
+<script src="gamefiles\minigame.js"></script>
 
 <script>
 	let lastClickedButton = null;
 	let audioObjects = {};
+	
+	function loadCurrentChapter() {
+		debugger;
+		//clearData();
+		console.log("loading current chapter");
+        const savedChapter = getData('currentChapter');
+        if (savedChapter) {
+			let result = loadDivContent();
+			if (result = false) alert("Warning, there is a problem with your save!")
+            //window[savedChapter]();  // Calls the function by its name
+        } else {
+			
+            startChapterInternal('startChapter');  // Start with chapter 1 by default
+        }
+    }
 	
 	function loadSound(){
 		let sounds = JSON.parse(localStorage.getItem('playingSounds')) || [];
@@ -127,6 +142,7 @@
 
 	// Function to stop all sounds and clear the list in localStorage
 	function stopAllSound() {
+		console.log("stopping sound...");
 		// Get the current list of sound sources from localStorage
 		let sounds = JSON.parse(localStorage.getItem('playingSounds')) || [];
 
@@ -165,21 +181,13 @@ function restartGame() {
     function clearData() {
         localStorage.clear();
 		clearContent();
+		document.getElementById('content').style.display='block';
         alert("All progress has been reset.");
+		document.body.innerHTML='<div class="container" id="content"><!-- Dynamic content will be loaded here --></div>';
         startChapterInternal('startChapter');  // Start from the beginning
     }
 
-    function loadCurrentChapter() {
-		//clearData();
-        const savedChapter = getData('currentChapter');
-        if (savedChapter) {
-			let result = loadDivContent();
-			if (result = false) alert("Warning, there is a problem with your save!")
-            //window[savedChapter]();  // Calls the function by its name
-        } else {
-            startChapterInternal('startChapter')();  // Start with chapter 1 by default
-        }
-    }
+
 	
     // Helper function to clear the content div
     function clearContent() {
@@ -238,6 +246,7 @@ function restartGame() {
 		
 		button.setAttribute('functionName', functionName);
 		console.log(functionName);
+		console.log(JSON.stringify(args));
 		button.setAttribute('args', JSON.stringify(args));
 		
 		button.href="JavaScript:void(0)"
@@ -450,8 +459,75 @@ function startChapterInternal (chapter, clear=false, markscroll=true,scrollToNew
 }
 
 
+// Function to hide all elements in the document
+function hideAllElements() {
+    // Get all elements in the document
+    const allElements = document.querySelectorAll('*');
+    
+    // Loop through each element and hide it
+    allElements.forEach(element => {
+        // Store the original display property in a data attribute
+        element.dataset.originalDisplay = element.style.display;
+        // Set the display property to 'none' to hide the element
+        element.style.display = 'none';
+    });
+}
+
+// Function to unhide all elements in the document
+function unhideAllElements() {
+    // Get all elements in the document
+    const allElements = document.querySelectorAll('*');
+    
+    // Loop through each element and restore its original display property
+    allElements.forEach(element => {
+        // Restore the original display property from the data attribute
+        element.style.display = element.dataset.originalDisplay || '';
+        // Remove the data attribute to clean up
+        delete element.dataset.originalDisplay;
+    });
+}
+
+function loadScript(src, callback) {
+    // Create a new script element
+    const script = document.createElement('script');
+    script.src = src;
+    script.type = 'text/javascript';
+
+    // When the script is loaded, execute the callback
+    script.onload = function() {
+        console.log(`${src} loaded successfully.`);
+        if (callback) callback();
+    };
+
+    // Append the script to the document
+    document.head.appendChild(script);
+}
+
+function unloadScript(src) {
+    // Find all script elements in the document
+    const scripts = document.getElementsByTagName('script');
+    for (let i = scripts.length - 1; i >= 0; i--) {
+        // If the script's src matches, remove it from the document
+        if (scripts[i] && scripts[i].src.includes(src)) {
+            scripts[i].parentNode.removeChild(scripts[i]);
+            console.log(`${src} removed successfully.`);
+        }
+    }
+}
 
 
+function hideMain(newDiv="minigame") {
+	mainContent.dataset.display=mainContent.style.display;
+	mainContent.style.display='none';
+	const gameDiv = document.createElement("div");
+	gameDiv.id=newDiv;
+	document.body.appendChild(gameDiv);
+}
+
+function showMain(hideDiv="minigame"){
+		mainContent.style.display=mainContent.dataset.display;
+		if (document.getElementById("minigame")) document.getElementById(hideDiv).remove();
+}
 
 
 </script>
